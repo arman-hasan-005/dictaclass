@@ -10,7 +10,7 @@ import DictationSession from "./pages/DictationSession/DictationSession";
 import Results from "./pages/Results/Results";
 import Leaderboard from "./pages/Leaderboard/Leaderboard";
 import Profile from "./pages/Profile/Profile";
-
+ 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
