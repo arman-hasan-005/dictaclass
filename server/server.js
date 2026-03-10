@@ -15,6 +15,7 @@ app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/sessions", require("./routes/sessionRoutes"));
 app.use("/api/passages", require("./routes/passageRoutes"));
 app.use("/api/leaderboard", require("./routes/leaderboardRoutes"));
+app.use("/api/tts", require("./routes/ttsRoutes")); 
 
 app.get("/", (req, res) => {
   res.send("DictaClass API is running");
