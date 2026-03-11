@@ -9,7 +9,7 @@ const getPassages = async (req, res) => {
     if (level) filter.level = level;
 
     const passages = await Passage.find(filter)
-      .select("title level chapter wordCount")
+      .select("title level chapter wordCount content")
       .sort({ level: 1, chapter: 1 });
 
     res.status(200).json(passages);

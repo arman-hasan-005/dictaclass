@@ -56,8 +56,12 @@ export default function Navbar() {
         <div className={styles.rightSide}>
           <div className={styles.xpBadge}>⚡ {user?.xp || 0} XP</div>
           <div className={styles.userInfo}>
-            <div className={styles.avatar}>
-              {user?.name?.charAt(0).toUpperCase()}
+            <div
+               className={styles.avatar}
+               onClick={() => navigate("/profile")}
+               style={{ cursor: "pointer" }}
+               >
+               {user?.name?.charAt(0).toUpperCase()}
             </div>
             <span className={styles.userName}>{user?.name}</span>
           </div>
