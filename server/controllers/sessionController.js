@@ -6,51 +6,48 @@ const { calculateXP, updateStreak, checkBadges } = require("../utils/gamificatio
 // POST /api/sessions
 const submitSession = async (req, res) => {
   try {
-    const { level, score, correctWords, totalWords, timeTaken, passageId } = req.body;
-    const userId = req.user._id;
-
-    // Get current user
-    const user = await User.findById(userId);
-
-    // Calculate XP earned
-    const xpEarned = calculateXP(level, score);
-
-    // Update streak
-    const newStreak = updateStreak(user.lastSessionDate, user.streak);
-
-    // Check for new badges
-    const newBadges = checkBadges(user, score, xpEarned);
-
-    // Create the session record
-    const session = await Session.create({
-      user: userId,
-      passage: passageId || null,
+    const {
+      passageId,
+      passageTitle,
       level,
       score,
       correctWords,
       totalWords,
-      timeTaken,
+      sentences,
+    } = req.body;
+    const userId = req.user._id;
+
+    const user = await User.findById(userId);
+    const xpEarned = calculateXP(level, score);
+    const newStreak = updateStreak(user.lastSessionDate, user.streak);
+    const newBadges = checkBadges(user, score, user.totalSessions + 1);
+
+    const session = await Session.create({
+      user: userId,
+      passage: passageId || null,
+      passageTitle: passageTitle || "Untitled",
+      level: level || "beginner",
+      score,
+      correctWords: correctWords || 0,
+      totalWords: totalWords || 0,
       xpEarned,
-      newBadges,
+      sentences: sentences || [],
     });
 
-    // Update user stats
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       {
         $inc: {
           xp: xpEarned,
           totalSessions: 1,
-          totalCorrectWords: correctWords,
-          totalWords: totalWords,
+          totalCorrectWords: correctWords || 0,
+          totalWords: totalWords || 0,
         },
         $set: {
           streak: newStreak,
           lastSessionDate: new Date(),
         },
-        $push: {
-          badges: { $each: newBadges },
-        },
+        $push: { badges: { $each: newBadges } },
       },
       { new: true }
     ).select("-password");

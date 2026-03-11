@@ -40,6 +40,11 @@ const userSchema = new mongoose.Schema(
       enum: ["beginner", "intermediate", "advanced"],
       default: "beginner",
     },
+    preferredVoice: {
+      type: String,
+      enum: ["female", "male"],
+      default: "female",
+    },
     badges: [
       {
         name: { type: String },
@@ -58,25 +63,8 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    preferredVoice: {
-      type: String,
-      enum: ["female", "male"],
-      default: "female",
-    },
-      /* So it sits right after preferredLevel: */
-    preferredLevel: {
-      type: String,
-      enum: ["beginner", "intermediate", "advanced"],
-      default: "beginner",
-    },
-    preferredVoice: {
-      type: String,
-      enum: ["female", "male"],
-      default: "female",
-    },
-  },  
+  },
   { timestamps: true }
 );
 
 module.exports = mongoose.model("User", userSchema);
-

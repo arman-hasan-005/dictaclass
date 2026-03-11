@@ -9,11 +9,14 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const stored = localStorage.getItem("dictaclass_user");
     if (stored) {
-      setUser(JSON.parse(stored));
+      try {
+        setUser(JSON.parse(stored));
+      } catch {
+        localStorage.removeItem("dictaclass_user");
+      }
     }
     setLoading(false);
   }, []);
-
   const login = (userData) => {
     localStorage.setItem("dictaclass_user", JSON.stringify(userData));
     setUser(userData);

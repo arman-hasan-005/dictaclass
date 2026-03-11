@@ -1,3 +1,4 @@
+
 .page {
   min-height: 100vh;
   background: var(--bg);
@@ -486,18 +487,6 @@
   line-height: 1.6;
 }
 
-.passageCard {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.passageCard .passageList {
-  flex: 1;
-  max-height: none;
-  overflow-y: auto;
-}
-
 /* Upload Tab Layout */
 .uploadLayout {
   display: flex;
@@ -567,14 +556,95 @@
 }
 .modeSub { font-size: 12px; color: var(--text-muted); }
 
+/* ── RESPONSIVE ── */
 @media (max-width: 768px) {
-  .uploadRow { grid-template-columns: 1fr; }
-  .uploadSummaryInner { grid-template-columns: 1fr; }
-  .uploadSummaryInner .startBtn { width: 100%; }
+
+  .content {
+    padding: 16px 14px;
+  }
+
+  .title { font-size: 24px; }
+  .subtitle { font-size: 13px; }
+  .headerRow { margin-bottom: 18px; }
+
+  /* Stack grid to single column */
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  /* Passage list scrollable with 5 visible */
+  .passageList {
+    max-height: 300px;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+  }
+
+  .passageCard .passageList {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  /* Tabs full width */
+  .tabRow {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 10px 8px;
+    font-size: 13px;
+    text-align: center;
+  }
+
+  /* Level grid stays 3 cols but smaller */
+  .levelGrid { gap: 8px; }
+  .levelCard { padding: 12px 8px; }
+  .levelIcon { font-size: 20px; }
+  .levelLabel { font-size: 13px; }
+
+  /* Speed options 2x2 */
+  .optionGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  /* Input mode full width */
+  .inputModeRow {
+    max-width: 100%;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* Upload row single column */
+  .uploadRow {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  /* Upload summary stacked */
+  .uploadSummaryInner {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .uploadSummaryInner .startBtn {
+    width: 100%;
+  }
+
+  /* Summary card */
+  .summaryCard { padding: 18px; }
+  .summaryTitle { font-size: 17px; }
+
+  /* Card padding smaller */
+  .card { padding: 16px; }
+  .cardTitle { font-size: 16px; }
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .grid { grid-template-columns: 1fr; }
+@media (max-width: 400px) {
+  .levelGrid { grid-template-columns: repeat(3, 1fr); }
+  .repGrid { grid-template-columns: repeat(3, 1fr); }
+  .voiceGrid { grid-template-columns: 1fr 1fr; }
+  .inputModeRow { grid-template-columns: 1fr 1fr; }
   .optionGrid { grid-template-columns: repeat(2, 1fr); }
 }

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -7,14 +6,14 @@ import Navbar from "../../components/Navbar/Navbar";
 import styles from "./Dashboard.module.css";
 
 const BADGES_INFO = {
-  "First Step":       { icon: "👣", desc: "Complete your first session" },
-  "Getting Started":  { icon: "🌱", desc: "Complete 10 sessions" },
-  "Dedicated Learner":{ icon: "📚", desc: "Complete 50 sessions" },
-  "Century Club":     { icon: "💯", desc: "Complete 100 sessions" },
-  "Perfect Score":    { icon: "⭐", desc: "Score 100% in a session" },
-  "High Achiever":    { icon: "🏆", desc: "Score 90%+ in a session" },
-  "7-Day Streak":     { icon: "🔥", desc: "Practice 7 days in a row" },
-  "30-Day Streak":    { icon: "💎", desc: "Practice 30 days in a row" },
+  "First Step": { icon: "👣", desc: "Complete your first session" },
+  "Getting Started": { icon: "🌱", desc: "Complete 10 sessions" },
+  "Dedicated Learner": { icon: "📚", desc: "Complete 50 sessions" },
+  "Century Club": { icon: "💯", desc: "Complete 100 sessions" },
+  "Perfect Score": { icon: "⭐", desc: "Score 100% in a session" },
+  "High Achiever": { icon: "🏆", desc: "Score 90%+ in a session" },
+  "7-Day Streak": { icon: "🔥", desc: "Practice 7 days in a row" },
+  "30-Day Streak": { icon: "💎", desc: "Practice 30 days in a row" },
 };
 
 const XP_PER_LEVEL = 500;
@@ -44,7 +43,7 @@ export default function Dashboard() {
     fetchData();
   }, []);
 
-  const xpProgress = ((user?.xp || 0) % XP_PER_LEVEL);
+  const xpProgress = (user?.xp || 0) % XP_PER_LEVEL;
   const xpPercent = Math.round((xpProgress / XP_PER_LEVEL) * 100);
   const currentLevel = Math.floor((user?.xp || 0) / XP_PER_LEVEL) + 1;
 
@@ -57,7 +56,9 @@ export default function Dashboard() {
   const formatDate = (dateStr) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString("en-GB", {
-      day: "numeric", month: "short", year: "numeric"
+      day: "numeric",
+      month: "short",
+      year: "numeric",
     });
   };
 
@@ -86,7 +87,6 @@ export default function Dashboard() {
       </div>
 
       <div className={styles.content}>
-
         {/* XP Progress */}
         <div className={styles.xpCard}>
           <div className={styles.xpTop}>
@@ -116,12 +116,16 @@ export default function Dashboard() {
           <div className={styles.statsGrid}>
             <div className={styles.statCard}>
               <div className={styles.statIcon}>📝</div>
-              <div className={styles.statValue}>{stats?.totalSessions || 0}</div>
+              <div className={styles.statValue}>
+                {stats?.totalSessions || 0}
+              </div>
               <div className={styles.statLabel}>Total Sessions</div>
             </div>
             <div className={styles.statCard}>
               <div className={styles.statIcon}>🎯</div>
-              <div className={styles.statValue}>{stats?.averageScore || 0}%</div>
+              <div className={styles.statValue}>
+                {stats?.averageScore || 0}%
+              </div>
               <div className={styles.statLabel}>Average Score</div>
             </div>
             <div className={styles.statCard}>
@@ -131,14 +135,15 @@ export default function Dashboard() {
             </div>
             <div className={styles.statCard}>
               <div className={styles.statIcon}>🏅</div>
-              <div className={styles.statValue}>{user?.badges?.length || 0}</div>
+              <div className={styles.statValue}>
+                {user?.badges?.length || 0}
+              </div>
               <div className={styles.statLabel}>Badges Earned</div>
             </div>
           </div>
         )}
 
         <div className={styles.bottomGrid}>
-
           {/* Recent Sessions */}
           <div className={styles.card}>
             <div className={styles.cardHeader}>
@@ -166,10 +171,13 @@ export default function Dashboard() {
                 {history.map((session) => (
                   <div key={session._id} className={styles.sessionRow}>
                     <div className={styles.sessionLeft}>
-                      <div className={styles.sessionLevel}>
-                        {session.level.charAt(0).toUpperCase() + session.level.slice(1)}
+                      <div className={styles.sessionTitle}>
+                        {session.passageTitle || "Untitled"}
                       </div>
-                      <div className={styles.sessionDate}>
+                      <div className={styles.sessionMeta}>
+                        {session.level?.charAt(0).toUpperCase() +
+                          session.level?.slice(1)}
+                        &nbsp;·&nbsp;
                         {formatDate(session.createdAt)}
                       </div>
                     </div>
@@ -202,18 +210,22 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className={styles.badgeGrid}>
-                {user.badges.map((badge, i) => (
-                  <div key={i} className={styles.badgeCard}>
-                    <div className={styles.badgeIcon}>
-                      {BADGES_INFO[badge.name]?.icon || "🏅"}
+                {user.badges
+                  .filter(
+                    (badge, index, self) =>
+                      index === self.findIndex((b) => b.name === badge.name),
+                  )
+                  .map((badge, i) => (
+                    <div key={i} className={styles.badgeCard}>
+                      <div className={styles.badgeIcon}>
+                        {BADGES_INFO[badge.name]?.icon || "🏅"}
+                      </div>
+                      <div className={styles.badgeName}>{badge.name}</div>
                     </div>
-                    <div className={styles.badgeName}>{badge.name}</div>
-                  </div>
-                ))}
+                  ))}
               </div>
             )}
           </div>
-
         </div>
 
         {/* Level Breakdown */}
@@ -224,21 +236,30 @@ export default function Dashboard() {
             </div>
             <div className={styles.levelGrid}>
               <div className={styles.levelItem}>
-                <div className={styles.levelDot} style={{ background: "#059669" }} />
+                <div
+                  className={styles.levelDot}
+                  style={{ background: "#059669" }}
+                />
                 <div className={styles.levelName}>🌱 Beginner</div>
                 <div className={styles.levelCount}>
                   {stats.levelBreakdown?.beginner || 0} sessions
                 </div>
               </div>
               <div className={styles.levelItem}>
-                <div className={styles.levelDot} style={{ background: "#D97706" }} />
+                <div
+                  className={styles.levelDot}
+                  style={{ background: "#D97706" }}
+                />
                 <div className={styles.levelName}>📖 Intermediate</div>
                 <div className={styles.levelCount}>
                   {stats.levelBreakdown?.intermediate || 0} sessions
                 </div>
               </div>
               <div className={styles.levelItem}>
-                <div className={styles.levelDot} style={{ background: "#7C3AED" }} />
+                <div
+                  className={styles.levelDot}
+                  style={{ background: "#7C3AED" }}
+                />
                 <div className={styles.levelName}>🎓 Advanced</div>
                 <div className={styles.levelCount}>
                   {stats.levelBreakdown?.advanced || 0} sessions
@@ -247,11 +268,7 @@ export default function Dashboard() {
             </div>
           </div>
         )}
-
       </div>
     </div>
   );
 }
-
-
-

@@ -97,4 +97,41 @@ const getMe = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, getMe };
+// GET /api/auth/profile
+const getProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select("-password");
+    const Session = require("../models/Session");
+    const recentSessions = await Session.find({ user: req.user._id })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .select("passageTitle level score xpEarned createdAt");
+    res.status(200).json({ user, recentSessions, stats: {} });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// PUT /api/auth/profile
+const updateProfile = async (req, res) => {
+  try {
+    const { name, preferredLevel, preferredVoice } = req.body;
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { name, preferredLevel, preferredVoice },
+      { new: true }
+    ).select("-password");
+    res.status(200).json({ user });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = {
+  registerUser,
+  loginUser,
+  getMe,
+  getProfile,
+  updateProfile,
+};
+

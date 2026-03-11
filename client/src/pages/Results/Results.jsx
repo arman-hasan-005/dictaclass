@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import API from "../../services/authService";
 import Navbar from "../../components/Navbar/Navbar";
+import { useAuth } from "../../context/AuthContext";
 import styles from "./Results.module.css";
 
 // Normalize text for comparison
@@ -59,7 +60,6 @@ const scoreHandwrite = (originalSentences, handwrittenText) => {
   let correct = 0;
   const wordResults = origWords.map((word, i) => {
     const typed = ansWords[i] || "";
-    // Allow 1 character difference for OCR errors
     const isCorrect = typed === word || levenshtein(typed, word) <= 1;
     if (isCorrect) correct++;
     return { word, typed, correct: isCorrect };
@@ -91,6 +91,8 @@ const getGrade = (pct) => {
 export default function Results() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { updateUser } = useAuth(); // ✅ Added
+
   const {
     passage,
     sentences,
@@ -134,15 +136,26 @@ export default function Results() {
           correctWords: totalCorrect,
           score: overallPercentage,
           sentences: isHandwrite
-            ? [{ original: sentences.join(" "), answer: handwrittenText || "", score: overallPercentage }]
+            ? [{
+                original: sentences.join(" "),
+                answer: handwrittenText || "",
+                score: overallPercentage,
+              }]
             : sentenceResults.map((r, i) => ({
                 original: sentences[i],
-                answer: answers[i] || "",
+                answer: answers?.[i] || "",
                 score: r.percentage,
               })),
         });
+
         setXpEarned(res.data.xpEarned || 0);
         setNewBadges(res.data.newBadges || []);
+
+        // ✅ Update XP in Navbar + Dashboard + Profile instantly
+        if (res.data.updatedUser) {
+          updateUser(res.data.updatedUser);
+        }
+
         setSaved(true);
       } catch (err) {
         console.error("Failed to save session:", err);
@@ -291,7 +304,7 @@ export default function Results() {
           <div className={styles.sentenceList}>
             {isHandwrite ? (
 
-              // ── Handwrite Mode — full passage comparison ──
+              // ── Handwrite Mode ──
               <div className={styles.sentenceCard}>
                 <div className={styles.sentenceHeader}>
                   <div className={styles.sentenceNum}>Full Passage</div>
@@ -342,7 +355,7 @@ export default function Results() {
 
             ) : (
 
-              // ── Type Mode — sentence by sentence ──
+              // ── Type Mode ──
               sentenceResults.map((result, i) => (
                 <div key={i} className={styles.sentenceCard}>
                   <div className={styles.sentenceHeader}>
