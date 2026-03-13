@@ -1,63 +1,66 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import API from "../../services/authService";
+import { getProfile, updateProfile } from "../../services/userService";
 import Navbar from "../../components/Navbar/Navbar";
 import styles from "./Profile.module.css";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
+import toast from "react-hot-toast";
 
-const BADGE_ICONS = {
-  "First Step": "👣",
-  "Getting Started": "🌱",
-  "Dedicated Learner": "📚",
-  "Century Club": "💯",
-  "Perfect Score": "⭐",
-  "High Achiever": "🏆",
-  "7-Day Streak": "🔥",
-  "30-Day Streak": "🌟",
+// All possible badges — locked ones shown greyed out
+const ALL_BADGES = {
+  "First Step":        { icon: "👣", desc: "Complete your first session" },
+  "Getting Started":   { icon: "🌱", desc: "Complete 10 sessions" },
+  "Dedicated Learner": { icon: "📚", desc: "Complete 50 sessions" },
+  "Century Club":      { icon: "💯", desc: "Complete 100 sessions" },
+  "Perfect Score":     { icon: "⭐", desc: "Score 100% in a session" },
+  "High Achiever":     { icon: "🏆", desc: "Score 90%+ in a session" },
+  "7-Day Streak":      { icon: "🔥", desc: "Practice 7 days in a row" },
+  "30-Day Streak":     { icon: "🌟", desc: "Practice 30 days in a row" },
 };
 
 export default function Profile() {
-  const { user, setUser } = useAuth();
-  const [, setStats] = useState(null);
+  const { user, updateUser } = useAuth();
+
   const [sessions, setSessions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState(null);
+  const [editing,  setEditing]  = useState(false);
+  const [saving,   setSaving]   = useState(false);
   const [form, setForm] = useState({
-    name: user?.name || "",
+    name:           user?.name           || "",
     preferredLevel: user?.preferredLevel || "beginner",
     preferredVoice: user?.preferredVoice || "female",
   });
-  const [saveMsg, setSaveMsg] = useState("");
 
-  useEffect(() => {
-    fetchProfile();
-  }, []); 
+  useEffect(() => { fetchProfile(); }, []); // eslint-disable-line
 
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const { data } = await API.get("/auth/profile");
-      setStats(data.stats);
+      setError(null);
+      const { data } = await getProfile();
       setSessions(data.recentSessions || []);
     } catch (err) {
-      console.error(err);
+      console.error("fetchProfile error:", err);
+      setError("Failed to load profile. Check your connection.");
+      toast.error("Could not load profile data.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleSave = async () => {
+    const toastId = toast.loading("Saving profile…");
     try {
       setSaving(true);
-      const { data } = await API.put("/auth/profile", form);
-      setUser(data.user);
-      setSaveMsg("✅ Profile updated!");
+      const { data } = await updateProfile(form);
+      updateUser(data.user);
+      toast.success("Profile saved!", { id: toastId });
       setEditing(false);
-      setTimeout(() => setSaveMsg(""), 3000);
     } catch (err) {
-      console.error(err);
-      setSaveMsg("❌ Failed to save.");
+      console.error("updateProfile error:", err);
+      toast.error("Failed to save. Please try again.", { id: toastId });
     } finally {
       setSaving(false);
     }
@@ -82,6 +85,8 @@ export default function Profile() {
     user?.totalWords > 0
       ? Math.round((user.totalCorrectWords / user.totalWords) * 100)
       : 0;
+
+  const earnedNames = user?.badges?.map((b) => b.name) || [];
 
   return (
     <div className={styles.page}>
@@ -110,37 +115,22 @@ export default function Profile() {
             )}
             <p className={styles.email}>{user?.email}</p>
             <div className={styles.streakRow}>
-              <span className={styles.streakBadge}>
-                🔥 {user?.streak || 0} day streak
-              </span>
-              <span className={styles.sessionsBadge}>
-                📖 {user?.totalSessions || 0} sessions
-              </span>
+              <span className={styles.streakBadge}>🔥 {user?.streak || 0} day streak</span>
+              <span className={styles.sessionsBadge}>📖 {user?.totalSessions || 0} sessions</span>
             </div>
           </div>
 
           <div className={styles.editArea}>
-            {saveMsg && <div className={styles.saveMsg}>{saveMsg}</div>}
             {!editing ? (
-              <button
-                className={styles.editBtn}
-                onClick={() => setEditing(true)}
-              >
+              <button className={styles.editBtn} onClick={() => setEditing(true)}>
                 ✏️ Edit Profile
               </button>
             ) : (
               <div className={styles.editBtns}>
-                <button
-                  className={styles.saveBtn}
-                  onClick={handleSave}
-                  disabled={saving}
-                >
-                  {saving ? "Saving..." : "Save"}
+                <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
+                  {saving ? "Saving…" : "Save"}
                 </button>
-                <button
-                  className={styles.cancelBtn}
-                  onClick={() => setEditing(false)}
-                >
+                <button className={styles.cancelBtn} onClick={() => setEditing(false)}>
                   Cancel
                 </button>
               </div>
@@ -148,7 +138,7 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* ── Preferences (shown when editing) ── */}
+        {/* ── Preferences (editing mode) ── */}
         {editing && (
           <div className={styles.prefsCard}>
             <h3 className={styles.cardTitle}>⚙️ Preferences</h3>
@@ -158,9 +148,7 @@ export default function Profile() {
                 <select
                   className={styles.prefSelect}
                   value={form.preferredLevel}
-                  onChange={(e) =>
-                    setForm({ ...form, preferredLevel: e.target.value })
-                  }
+                  onChange={(e) => setForm({ ...form, preferredLevel: e.target.value })}
                 >
                   <option value="beginner">🌱 Beginner (A1-A2)</option>
                   <option value="intermediate">📖 Intermediate (B1-B2)</option>
@@ -172,9 +160,7 @@ export default function Profile() {
                 <select
                   className={styles.prefSelect}
                   value={form.preferredVoice}
-                  onChange={(e) =>
-                    setForm({ ...form, preferredVoice: e.target.value })
-                  }
+                  onChange={(e) => setForm({ ...form, preferredVoice: e.target.value })}
                 >
                   <option value="female">👩 Female</option>
                   <option value="male">👨 Male</option>
@@ -184,7 +170,7 @@ export default function Profile() {
           </div>
         )}
 
-        {/* ── Stats Row ── */}
+        {/* ── Stats ── */}
         <div className={styles.statsGrid}>
           <div className={styles.statCard}>
             <div className={styles.statIcon}>🎯</div>
@@ -193,9 +179,7 @@ export default function Profile() {
           </div>
           <div className={styles.statCard}>
             <div className={styles.statIcon}>✅</div>
-            <div className={styles.statValue}>
-              {user?.totalCorrectWords || 0}
-            </div>
+            <div className={styles.statValue}>{user?.totalCorrectWords || 0}</div>
             <div className={styles.statLabel}>Words Correct</div>
           </div>
           <div className={styles.statCard}>
@@ -210,41 +194,73 @@ export default function Profile() {
           </div>
         </div>
 
-        <div className={styles.bottomGrid}>
+        {/* ── Error state ── */}
+        {error && (
+          <div className={styles.errorBox}>
+            <p>{error}</p>
+            <button className={styles.retryBtn} onClick={fetchProfile}>
+              Try Again
+            </button>
+          </div>
+        )}
 
-          {/* ── Badges ── */}
+        <div className={styles.bottomGrid}>
+          {/* ── Badges — all badges, locked ones greyed out ── */}
           <div className={styles.card}>
-            <h3 className={styles.cardTitle}>🏅 Badges</h3>
-            {user?.badges?.length === 0 || !user?.badges ? (
-              <div className={styles.emptyBadges}>
-                <div className={styles.emptyIcon}>🎖️</div>
-                <div>Complete sessions to earn badges!</div>
-              </div>
-            ) : (
-              <div className={styles.badgesGrid}>
-                {user.badges.map((badge, i) => (
-                  <div key={i} className={styles.badge}>
-                    <div className={styles.badgeIcon}>
-                      {BADGE_ICONS[badge.name] || "🏅"}
-                    </div>
-                    <div className={styles.badgeName}>{badge.name}</div>
+            <div className={styles.badgeHeader}>
+              <h3 className={styles.cardTitle}>🏅 Badges</h3>
+              <span className={styles.badgeCount}>
+                {earnedNames.length} / {Object.keys(ALL_BADGES).length} earned
+              </span>
+            </div>
+            <div className={styles.badgesGrid}>
+              {Object.entries(ALL_BADGES).map(([name, info]) => {
+                const earned   = earnedNames.includes(name);
+                const earnedAt = user?.badges?.find((b) => b.name === name)?.earnedAt;
+                return (
+                  <div
+                    key={name}
+                    className={styles.badge}
+                    style={{
+                      opacity: earned ? 1 : 0.35,
+                      filter:  earned ? "none" : "grayscale(1)",
+                    }}
+                    title={earned ? `Earned: ${name}` : info.desc}
+                  >
+                    <div className={styles.badgeIcon}>{info.icon}</div>
+                    <div className={styles.badgeName}>{name}</div>
                     <div className={styles.badgeDate}>
-                      {new Date(badge.earnedAt).toLocaleDateString()}
+                      {earned && earnedAt
+                        ? new Date(earnedAt).toLocaleDateString()
+                        : info.desc}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── Recent Sessions — skeleton while loading ── */}
+          <div className={styles.card}>
+            <h3 className={styles.cardTitle}>📋 Recent Sessions</h3>
+            {loading ? (
+              <div className={styles.sessionList}>
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className={styles.sessionRow}>
+                    <div className={styles.sessionInfo}>
+                      <Skeleton width={160} height={16} style={{ marginBottom: 6 }} />
+                      <Skeleton width={110} height={12} />
+                    </div>
+                    <div className={styles.sessionRight}>
+                      <Skeleton width={32} height={28} />
+                      <Skeleton width={44} height={20} />
                     </div>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
-
-          {/* ── Recent Sessions ── */}
-          <div className={styles.card}>
-            <h3 className={styles.cardTitle}>📋 Recent Sessions</h3>
-            {loading ? (
-              <div className={styles.loading}>Loading...</div>
             ) : sessions.length === 0 ? (
               <div className={styles.emptySessions}>
-                No sessions yet. Start practicing! 🚀
+                No sessions yet. Start practising! 🚀
               </div>
             ) : (
               <div className={styles.sessionList}>
@@ -252,10 +268,10 @@ export default function Profile() {
                   <div key={i} className={styles.sessionRow}>
                     <div className={styles.sessionInfo}>
                       <div className={styles.sessionTitle}>
-                        {s.passageTitle}
+                        {s.passageTitle || "Untitled"}
                       </div>
                       <div className={styles.sessionMeta}>
-                        {s.level?.charAt(0).toUpperCase() + s.level?.slice(1)}{" "}
+                        {s.level?.charAt(0).toUpperCase() + s.level?.slice(1)}
                         &nbsp;·&nbsp;
                         {new Date(s.createdAt).toLocaleDateString()}
                       </div>
@@ -274,8 +290,8 @@ export default function Profile() {
               </div>
             )}
           </div>
-
         </div>
+
       </div>
     </div>
   );

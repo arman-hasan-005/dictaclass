@@ -57,6 +57,99 @@
   padding: 32px 24px;
 }
 
+/* ── Error state ── */
+.errorBox {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 12px;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  color: #DC2626;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.retryBtn {
+  background: #DC2626;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+
+.retryBtn:hover { background: #B91C1C; }
+
+/* ── Onboarding banner ── */
+.onboardCard {
+  background: linear-gradient(135deg, #1E3A5F 0%, #2B4F7F 100%);
+  border-radius: 16px;
+  padding: 28px 32px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.onboardLeft { flex: 1; }
+
+.onboardTitle {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 8px;
+}
+
+.onboardText {
+  font-size: 14px;
+  color: rgba(255,255,255,0.75);
+  margin-bottom: 12px;
+}
+
+.onboardSteps {
+  padding-left: 18px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.onboardSteps li {
+  font-size: 13px;
+  color: rgba(255,255,255,0.8);
+  line-height: 1.5;
+}
+
+.onboardBtn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 24px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.onboardBtn:hover {
+  background: #E07B3A;
+  transform: translateY(-1px);
+}
+
 /* XP Card */
 .xpCard {
   background: var(--white);
@@ -121,12 +214,6 @@
 }
 
 /* Stats Grid */
-.loadingRow {
-  text-align: center;
-  padding: 24px;
-  color: var(--text-muted);
-}
-
 .statsGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -207,6 +294,12 @@
   padding: 0;
 }
 
+.badgeCount {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
 /* Empty State */
 .emptyState {
   text-align: center;
@@ -247,18 +340,6 @@
 
 .sessionRow:hover { background: #F3F4F6; }
 
-.sessionLevel {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 2px;
-}
-
-.sessionDate {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
 .sessionRight {
   display: flex;
   align-items: center;
@@ -280,26 +361,48 @@
   border-radius: 6px;
 }
 
-/* Badge Grid */
+.sessionTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+
+.sessionMeta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Badge Grid — all 8 badges always shown */
 .badgeGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
 }
 
 .badgeCard {
   background: #F9FAFB;
   border-radius: 10px;
-  padding: 12px 8px;
+  padding: 10px 6px;
   text-align: center;
+  transition: transform 0.15s;
 }
 
-.badgeIcon { font-size: 28px; margin-bottom: 6px; }
+.badgeCard:hover { transform: translateY(-1px); }
+
+.badgeIcon { font-size: 24px; margin-bottom: 4px; }
 
 .badgeName {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   color: var(--text);
+  line-height: 1.3;
+  margin-bottom: 2px;
+}
+
+.badgeDesc {
+  font-size: 9px;
+  color: var(--text-muted);
   line-height: 1.3;
 }
 
@@ -339,23 +442,14 @@
   color: var(--text-muted);
 }
 
-.sessionTitle {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 3px;
-}
-
-.sessionMeta {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
 /* Responsive */
 @media (max-width: 768px) {
-  .statsGrid { grid-template-columns: repeat(2, 1fr); }
-  .bottomGrid { grid-template-columns: 1fr; }
-  .levelGrid { grid-template-columns: 1fr; }
-  .headerInner { flex-direction: column; align-items: flex-start; gap: 16px; }
-  .badgeGrid { grid-template-columns: repeat(2, 1fr); }
+  .statsGrid       { grid-template-columns: repeat(2, 1fr); }
+  .bottomGrid      { grid-template-columns: 1fr; }
+  .levelGrid       { grid-template-columns: 1fr; }
+  .headerInner     { flex-direction: column; align-items: flex-start; gap: 16px; }
+  .badgeGrid       { grid-template-columns: repeat(4, 1fr); }
+  .onboardCard     { flex-direction: column; }
+  .onboardBtn      { width: 100%; }
+  .errorBox        { flex-direction: column; align-items: flex-start; gap: 12px; }
 }

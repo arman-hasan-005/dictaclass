@@ -11,6 +11,13 @@ const sessionSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Passage",
       required: false,
+      default: null,
+    },
+    // FIX: passageTitle was being written by the controller but missing from schema
+    passageTitle: {
+      type: String,
+      default: "Untitled",
+      trim: true,
     },
     level: {
       type: String,
@@ -26,10 +33,12 @@ const sessionSchema = new mongoose.Schema(
     correctWords: {
       type: Number,
       required: true,
+      default: 0,
     },
     totalWords: {
       type: Number,
       required: true,
+      default: 0,
     },
     timeTaken: {
       type: Number,
@@ -39,12 +48,26 @@ const sessionSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    newBadges: [
-      {
-        name: { type: String },
-        earnedAt: { type: Date, default: Date.now },
-      },
-    ],
+    // FIX: sentences was being written by the controller but missing from schema
+    sentences: {
+      type: [
+        {
+          original: { type: String },
+          answer: { type: String },
+          score: { type: Number },
+        },
+      ],
+      default: [],
+    },
+    newBadges: {
+      type: [
+        {
+          name: { type: String },
+          earnedAt: { type: Date, default: Date.now },
+        },
+      ],
+      default: [],
+    },
   },
   { timestamps: true }
 );

@@ -1,29 +1,9 @@
-
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Navbar from "../../components/Navbar/Navbar";
-import styles from "./DictationSession.module.css";
 import NotebookUpload from "../../components/NotebookUpload/NotebookUpload";
-
-// Split passage into sentences
-const splitSentences = (text) => {
-  return (
-    text
-      .match(/[^.!?]+[.!?]+/g)
-      ?.map((s) => s.trim())
-      .filter((s) => s.length > 2) || [text]
-  );
-};
-
-const PHASES = {
-  IDLE: "idle",
-  ANNOUNCING: "announcing",
-  READING: "reading",
-  PAUSING: "pausing",
-  REPEATING: "repeating",
-  WAITING: "waiting",
-  FINISHED: "finished",
-};
+import { useDictation, PHASES } from "../../hooks/useDictation";
+import styles from "./DictationSession.module.css";
 
 export default function DictationSession() {
   const location = useLocation();
@@ -31,250 +11,73 @@ export default function DictationSession() {
   const { passage, speed, repetitions, pause, voice, inputMode } =
     location.state || {};
 
-  const sentences = useMemo(
-    () => (passage?.content ? splitSentences(passage.content) : []),
-    [passage?.content]
-  );
+  const {
+    sentences,
+    phase,
+    currentIndex,
+    currentRep,
+    answers,
+    pauseCountdown,
+    started,
+    statusText,
+    isPaused,
+    inputRefs,
+    ttsProvider,
+    ttsWarning,
+    handleStart,
+    handlePauseResume,
+    handleStop,
+    handleAnswerChange,
+    cleanup,
+  } = useDictation({ passage, speed, repetitions, pause, voice });
 
-  const [phase, setPhase] = useState(PHASES.IDLE);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [currentRep, setCurrentRep] = useState(1);
-  const [answers, setAnswers] = useState(Array(sentences.length).fill(""));
-  const [pauseCountdown, setPauseCountdown] = useState(0);
-  const [started, setStarted] = useState(false);
-  const [statusText, setStatusText] = useState("Ready to begin");
-  const [isPaused, setIsPaused] = useState(false);
-
-  const inputRefs = useRef([]);
-  const countdownRef = useRef(null);
-  const isCancelledRef = useRef(false);
-  const isPausedRef = useRef(false);
-
-  // Redirect if no passage
+  // Redirect if no passage was passed
   useEffect(() => {
-    if (!passage) navigate("/setup");
+    if (!passage) navigate("/setup", { replace: true });
   }, []); // eslint-disable-line
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      isCancelledRef.current = true;
-      clearInterval(countdownRef.current);
-      window.speechSynthesis.cancel();
-    };
-  }, []);
-
-  // ── Get preferred voice ──────────────────────────────
-  const getVoice = () => {
-    const voices = window.speechSynthesis.getVoices();
-    return (
-      voices.find((v) =>
-        voice === "female"
-          ? v.name.includes("Zira") ||
-            v.name.includes("Samantha") ||
-            v.name.includes("Susan") ||
-            v.name.toLowerCase().includes("female")
-          : v.name.includes("David") ||
-            v.name.includes("Mark") ||
-            v.name.includes("Daniel") ||
-            v.name.toLowerCase().includes("male")
-      ) || null
-    );
-  };
-
-  // ── Speak using browser SpeechSynthesis ─────────────
-  const speakText = useCallback(
-    (text, rate) => {
-      return new Promise((resolve) => {
-        if (isCancelledRef.current) return resolve();
-        window.speechSynthesis.cancel();
-
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = rate || speed || 1.0;
-        utterance.pitch = 1;
-        utterance.volume = 1;
-
-        const doSpeak = () => {
-          const preferred = getVoice();
-          if (preferred) utterance.voice = preferred;
-
-          // Pause checker
-          const pauseChecker = setInterval(() => {
-            if (isCancelledRef.current) {
-              window.speechSynthesis.cancel();
-              clearInterval(pauseChecker);
-              resolve();
-            } else if (isPausedRef.current) {
-              window.speechSynthesis.pause();
-            } else {
-              window.speechSynthesis.resume();
-            }
-          }, 200);
-
-          utterance.onend = () => {
-            clearInterval(pauseChecker);
-            resolve();
-          };
-          utterance.onerror = () => {
-            clearInterval(pauseChecker);
-            resolve();
-          };
-
-          window.speechSynthesis.speak(utterance);
-        };
-
-        if (window.speechSynthesis.getVoices().length > 0) {
-          doSpeak();
-        } else {
-          window.speechSynthesis.onvoiceschanged = doSpeak;
-        }
-      });
-    },
-    [speed, voice] // eslint-disable-line
-  );
-
-  // ── Countdown pause ──────────────────────────────────
-  const doPause = useCallback((ms) => {
-    return new Promise((resolve) => {
-      if (isCancelledRef.current) return resolve();
-      const seconds = Math.ceil(ms / 1000);
-      setPauseCountdown(seconds);
-      let remaining = seconds;
-      countdownRef.current = setInterval(() => {
-        if (isPausedRef.current) return;
-        remaining -= 1;
-        setPauseCountdown(remaining);
-        if (remaining <= 0) {
-          clearInterval(countdownRef.current);
-          resolve();
-        }
-      }, 1000);
-    });
-  }, []);
-
-  // ── Main session flow ────────────────────────────────
-  const runSession = useCallback(async () => {
-    isCancelledRef.current = false;
-
-    // ── 1. Announcement ──
-    setPhase(PHASES.ANNOUNCING);
-    setStatusText("📢 Listening to announcement...");
-
-    const announcementText =
-      passage.source === "upload"
-        ? `Attention class. Today's dictation is titled: ${passage.title}. We will begin now. Please get ready.`
-        : `Attention class. Today's dictation is titled: ${passage.title}. Level: ${passage.level}. We will begin now. Please get ready.`;
-
-    await speakText(announcementText, 0.9);
-
-    if (isCancelledRef.current) return;
-    await doPause(2000);
-
-    // ── 2. Read each sentence ──
-    for (let i = 0; i < sentences.length; i++) {
-      if (isCancelledRef.current) return;
-
-      setCurrentIndex(i);
-      setTimeout(() => inputRefs.current[i]?.focus(), 100);
-
-      for (let rep = 1; rep <= repetitions; rep++) {
-        if (isCancelledRef.current) return;
-
-        setCurrentRep(rep);
-        setPhase(rep === 1 ? PHASES.READING : PHASES.REPEATING);
-        setStatusText(
-          rep === 1
-            ? `📢 Sentence ${i + 1} of ${sentences.length}`
-            : `🔁 Repeating sentence ${i + 1}...`
-        );
-
-        await speakText(sentences[i]);
-        if (isCancelledRef.current) return;
-
-        if (rep < repetitions) {
-          setPhase(PHASES.PAUSING);
-          setStatusText("✏️ Write what you heard...");
-          await doPause(2000);
-        }
-      }
-
-      if (isCancelledRef.current) return;
-      setPhase(PHASES.WAITING);
-      setStatusText("✏️ Write the sentence now...");
-      await doPause(pause);
-    }
-
-    // ── 3. End announcement ──
-    setPhase(PHASES.ANNOUNCING);
-    setStatusText("🔔 Dictation complete!");
-
-    await speakText(
-      "That is the end of the dictation. Please check your work.",
-      0.9
-    );
-
-    setPhase(PHASES.FINISHED);
-    setStatusText("✅ Dictation finished! Review and submit.");
-  }, [sentences, passage, repetitions, pause, speakText, doPause]);
-
-  const handleStart = () => {
-    setStarted(true);
-    runSession();
-  };
-
-  const handlePauseResume = () => {
-    isPausedRef.current = !isPausedRef.current;
-    setIsPaused(isPausedRef.current);
-    if (isPausedRef.current) {
-      window.speechSynthesis.pause();
-    } else {
-      window.speechSynthesis.resume();
-    }
-  };
-
-  const handleStop = () => {
-    isCancelledRef.current = true;
-    clearInterval(countdownRef.current);
-    window.speechSynthesis.cancel();
-    setPhase(PHASES.FINISHED);
-    setStatusText("✅ Session stopped. Review and submit.");
-    setStarted(true);
-  };
+  // Cleanup speech synthesis and timers on unmount
+  useEffect(() => () => cleanup(), []); // eslint-disable-line
 
   const handleSubmit = () => {
-    navigate("/results", {
-      state: { passage, sentences, answers },
-    });
+    navigate("/results", { state: { passage, sentences, answers } });
   };
 
-  const handleAnswerChange = (index, value) => {
-    const updated = [...answers];
-    updated[index] = value;
-    setAnswers(updated);
-  };
-
-  // ── Phase UI helpers ─────────────────────────────────
+  // ── Phase visual helpers ───────────────────────────────────
   const getPhaseColor = () => {
     switch (phase) {
-      case PHASES.ANNOUNCING: return "#7C3AED";
-      case PHASES.READING: return "#059669";
-      case PHASES.REPEATING: return "#D97706";
+      case PHASES.ANNOUNCING:
+        return "#7C3AED";
+      case PHASES.READING:
+        return "#059669";
+      case PHASES.REPEATING:
+        return "#D97706";
       case PHASES.WAITING:
-      case PHASES.PAUSING: return "#2563EB";
-      case PHASES.FINISHED: return "#059669";
-      default: return "var(--primary)";
+      case PHASES.PAUSING:
+        return "#2563EB";
+      case PHASES.FINISHED:
+        return "#059669";
+      default:
+        return "var(--primary)";
     }
   };
 
   const getPhaseIcon = () => {
     switch (phase) {
-      case PHASES.ANNOUNCING: return "📢";
-      case PHASES.READING: return "🎙️";
-      case PHASES.REPEATING: return "🔁";
-      case PHASES.WAITING: return "✏️";
-      case PHASES.PAUSING: return "⏳";
-      case PHASES.FINISHED: return "✅";
-      default: return "🎓";
+      case PHASES.ANNOUNCING:
+        return "📢";
+      case PHASES.READING:
+        return "🎙️";
+      case PHASES.REPEATING:
+        return "🔁";
+      case PHASES.WAITING:
+        return "✏️";
+      case PHASES.PAUSING:
+        return "⏳";
+      case PHASES.FINISHED:
+        return "✅";
+      default:
+        return "🎓";
     }
   };
 
@@ -283,10 +86,65 @@ export default function DictationSession() {
   return (
     <div className={styles.page}>
       <Navbar />
-
       <div className={styles.content}>
+        {/* ── TTS Provider Banner ── */}
+        {ttsWarning && (
+          <div
+            style={{
+              background: ttsProvider === "browser" ? "#FEF3C7" : "#EFF6FF",
+              border: `1px solid ${ttsProvider === "browser" ? "#FDE68A" : "#BFDBFE"}`,
+              borderRadius: 8,
+              padding: "10px 16px",
+              marginBottom: 12,
+              fontSize: 14,
+              color: ttsProvider === "browser" ? "#92400E" : "#1E40AF",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            <span style={{ flex: 1 }}>{ttsWarning}</span>
+          </div>
+        )}
 
-        {/* ── Top Status Bar ── */}
+        {/* TTS provider indicator (subtle pill, always visible when session running) */}
+        {started && (
+          <div style={{ textAlign: "right", fontSize: 12, marginBottom: 6 }}>
+            <span
+              style={{
+                padding: "2px 10px",
+                borderRadius: 12,
+                background:
+                  ttsProvider === "elevenlabs"
+                    ? "#ECFDF5"
+                    : ttsProvider === "google_tts"
+                      ? "#EFF6FF"
+                      : "#FEF3C7",
+                color:
+                  ttsProvider === "elevenlabs"
+                    ? "#065F46"
+                    : ttsProvider === "google_tts"
+                      ? "#1E40AF"
+                      : "#92400E",
+                border: "1px solid",
+                borderColor:
+                  ttsProvider === "elevenlabs"
+                    ? "#A7F3D0"
+                    : ttsProvider === "google_tts"
+                      ? "#BFDBFE"
+                      : "#FDE68A",
+              }}
+            >
+              {ttsProvider === "elevenlabs"
+                ? "🎙️ ElevenLabs"
+                : ttsProvider === "google_tts"
+                  ? "🔵 Google TTS"
+                  : "🔊 Browser Voice"}
+            </span>
+          </div>
+        )}
+
+        {/* ── Status Bar ── */}
         <div
           className={styles.statusBar}
           style={{ borderColor: getPhaseColor() }}
@@ -298,9 +156,10 @@ export default function DictationSession() {
               <div className={styles.statusMeta}>
                 {passage.title} &nbsp;·&nbsp;
                 {passage.level?.charAt(0).toUpperCase() +
-                  passage.level?.slice(1)}{" "}
+                  passage.level?.slice(1)}
                 &nbsp;·&nbsp;
-                {voice === "female" ? "👩 Female" : "👨 Male"} &nbsp;·&nbsp;
+                {voice === "female" ? "👩 Female" : "👨 Male"}
+                &nbsp;·&nbsp;
                 {speed}x speed
               </div>
             </div>
@@ -329,9 +188,7 @@ export default function DictationSession() {
                   <div
                     className={styles.progressFill}
                     style={{
-                      width: `${
-                        ((currentIndex + 1) / sentences.length) * 100
-                      }%`,
+                      width: `${((currentIndex + 1) / sentences.length) * 100}%`,
                       background: getPhaseColor(),
                     }}
                   />
@@ -371,19 +228,18 @@ export default function DictationSession() {
           </div>
         </div>
 
-        {/* ── Sentences + Inputs ── */}
+        {/* ── Handwrite Mode ── */}
         {inputMode === "handwrite" ? (
-
-          /* ── HANDWRITE MODE ── */
           <div className={styles.handwriteArea}>
             {phase !== PHASES.FINISHED ? (
               <div className={styles.handwriteListening}>
                 <div className={styles.handwriteIcon}>📓</div>
-                <h2 className={styles.handwriteTitle}>Write on your notebook</h2>
+                <h2 className={styles.handwriteTitle}>
+                  Write on your notebook
+                </h2>
                 <p className={styles.handwriteSub}>
-                  Listen carefully and write each sentence on paper as you hear
-                  it. When the dictation ends, you will upload a photo of your
-                  work.
+                  Listen carefully and write each sentence on paper. When the
+                  dictation ends, you will upload a photo of your work.
                 </p>
                 {started && phase !== PHASES.IDLE && (
                   <div className={styles.handwriteProgress}>
@@ -394,9 +250,7 @@ export default function DictationSession() {
                       <div
                         className={styles.handwriteProgressFill}
                         style={{
-                          width: `${
-                            ((currentIndex + 1) / sentences.length) * 100
-                          }%`,
+                          width: `${((currentIndex + 1) / sentences.length) * 100}%`,
                         }}
                       />
                     </div>
@@ -407,7 +261,7 @@ export default function DictationSession() {
               <NotebookUpload
                 sentences={sentences}
                 passage={passage}
-                onSubmit={(fullText) => {
+                onSubmit={(fullText) =>
                   navigate("/results", {
                     state: {
                       passage,
@@ -416,24 +270,19 @@ export default function DictationSession() {
                       handwrittenText: fullText,
                       isHandwrite: true,
                     },
-                  });
-                }}
+                  })
+                }
               />
             )}
           </div>
-
         ) : (
-
-          /* ── TYPE MODE ── */
+          /* ── Type Mode ── */
           <div className={styles.sentenceList}>
             {sentences.map((sentence, i) => {
               const isActive =
-                started &&
-                currentIndex === i &&
-                phase !== PHASES.FINISHED;
+                started && currentIndex === i && phase !== PHASES.FINISHED;
               const isPast =
-                started &&
-                (i < currentIndex || phase === PHASES.FINISHED);
+                started && (i < currentIndex || phase === PHASES.FINISHED);
               const isFuture = !started || i > currentIndex;
 
               return (
@@ -461,12 +310,12 @@ export default function DictationSession() {
                       className={styles.answerInput}
                       placeholder={
                         !started
-                          ? "Start dictation to begin typing..."
+                          ? "Start dictation to begin typing…"
                           : isActive
-                          ? "Type what you hear..."
-                          : isPast
-                          ? "You can still edit this answer"
-                          : "Waiting..."
+                            ? "Type what you hear…"
+                            : isPast
+                              ? "You can still edit this answer"
+                              : "Waiting…"
                       }
                       value={answers[i]}
                       onChange={(e) => handleAnswerChange(i, e.target.value)}
@@ -492,7 +341,6 @@ export default function DictationSession() {
               );
             })}
           </div>
-
         )}
 
         {/* ── Submit Footer ── */}
@@ -503,15 +351,11 @@ export default function DictationSession() {
               <strong>{answers.filter((a) => a.trim()).length}</strong> of{" "}
               <strong>{sentences.length}</strong> sentences.
             </div>
-            <button
-              className={styles.submitBtnLarge}
-              onClick={handleSubmit}
-            >
+            <button className={styles.submitBtnLarge} onClick={handleSubmit}>
               Submit & See Results →
             </button>
           </div>
         )}
-
       </div>
     </div>
   );

@@ -249,3 +249,33 @@
   .tabs { gap: 6px; }
   .tab { padding: 8px 12px; font-size: 13px; }
 }
+/* ── Phase 2 additions ── */
+.errorBox {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  color: #DC2626;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.retryBtn {
+  background: #DC2626;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s;
+}
+
+.retryBtn:hover { background: #B91C1C; }

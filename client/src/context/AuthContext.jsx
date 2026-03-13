@@ -17,6 +17,7 @@ export const AuthProvider = ({ children }) => {
     }
     setLoading(false);
   }, []);
+
   const login = (userData) => {
     localStorage.setItem("dictaclass_user", JSON.stringify(userData));
     setUser(userData);
@@ -33,6 +34,9 @@ export const AuthProvider = ({ children }) => {
     setUser(merged);
   };
 
+  // ✅ Prevent rendering children until auth state is resolved
+  if (loading) return null;
+
   return (
     <AuthContext.Provider value={{ user, login, logout, updateUser, loading }}>
       {children}
@@ -40,7 +44,6 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// ✅ This is the named export that was missing
 export const useAuth = () => useContext(AuthContext);
 
 export default AuthContext;

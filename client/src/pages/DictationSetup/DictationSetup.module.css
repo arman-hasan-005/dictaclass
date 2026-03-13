@@ -648,3 +648,28 @@
   .inputModeRow { grid-template-columns: 1fr 1fr; }
   .optionGrid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ── Phase 2 additions ── */
+.passageError {
+  text-align: center;
+  padding: 24px 16px;
+  color: #DC2626;
+  font-size: 14px;
+}
+
+.passageError p { margin-bottom: 12px; }
+
+.retryBtn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+
+.retryBtn:hover { background: var(--primary-light); }
